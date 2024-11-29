@@ -1,21 +1,19 @@
 import torch
 import argparse
-from model import SRCNN
+from model import VDSR
 import os
 
 def main():
     # Argument parser 
-    parser = argparse.ArgumentParser(description="Export SRCNN model to ONNX format")
+    parser = argparse.ArgumentParser(description="Export VDSR model to ONNX format")
     
     parser.add_argument('--load_path', type=str, required=True , help="Path to the saved model checkpoint")
     parser.add_argument('--save_path', type=str, default=None, help="Path to save the exported ONNX model")
-    parser.add_argument('--verbose', type=bool, default=True, help="Verbose output for onnx export")
-    parser.add_argument('--architecture', type=str, default="955", help='Model architecture must be 3 layers')
-    parser.add_argument('--padding',  action='store_true', default=False, help='same with output size')
     parser.add_argument('--img_format',  type=str, default="RGB", help=" ['RGB', 'YCbCr', 'Y'] Train Image format")
     parser.add_argument('--width', type=int, default=256, help="Width of the input image")
     parser.add_argument('--height', type=int, default=256, help="Height of the input image")
     parser.add_argument('--opset_version', type=int, default=9, help="ONNX opset version")
+    parser.add_argument('--verbose', type=bool, default=True, help="Verbose output for onnx export")
     
     args = parser.parse_args()
     
@@ -30,7 +28,7 @@ def main():
         os.makedirs(save_dir)
 
     # Initialize the model
-    model = SRCNN(args.architecture, args.padding, args.img_format) 
+    model = VDSR(args.img_format) 
     model = torch.load(args.load_path, map_location=torch.device('cpu'))
     model.eval()
     

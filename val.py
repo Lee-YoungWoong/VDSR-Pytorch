@@ -10,12 +10,10 @@ from skimage.metrics import peak_signal_noise_ratio
 from skimage import io
 
 
-parser = argparse.ArgumentParser(description='SRCNN Validation parameters')
+parser = argparse.ArgumentParser(description='VDSR Validation parameters')
 parser.add_argument('--weight', type=str, required=True, help='Path to the saved model checkpoint')
-parser.add_argument('--validation_dataset', type=str, default="data/test", help='Validation dataset path')
+parser.add_argument('--validation_dataset', type=str, default="dataset/validation", help='Validation dataset path')
 parser.add_argument('--scale_factor', type=int, default=2, help='Upscale factor')
-parser.add_argument('--architecture', type=str, required=True, help='Model architecture must be 3 layers')
-parser.add_argument('--padding',  action='store_true', required=True, help='same with output size')
 parser.add_argument('--img_format',  type=str, required=True, help=" ['RGB', 'YCbCr', 'Y'] Train Image format")
 parser.add_argument('--cuda', action='store_true', default=False, help='Use cuda')
 args = parser.parse_args()
@@ -26,84 +24,37 @@ avg_psnr_value = 0  # Initialize Average PSNR
 
 print("\n")
 print("*" * 100)
-print("START Validation SRCNN!!")
+print("START Validation VDSR!!")
 print("*" * 100)
-
-if len(args.architecture) != 3: 
-    raise ValueError("SRCNN Architecture must be 3 layers.")
-else:
-    j = int(args.architecture[0])
-    k = int(args.architecture[1])
-    l = int(args.architecture[2])    
-
 
 image_files = [f for f in os.listdir(args.validation_dataset) if os.path.isfile(os.path.join(args.validation_dataset, f))]
 for image_file in image_files:
     image_path = os.path.join(args.validation_dataset, image_file)
     
-    if args.padding == True:
-        # Load image
-        if args.img_format == 'RGB':
-            image = Image.open(image_path).convert('RGB')
-            target = np.array(image.convert('YCbCr'))[:, :, 0]  # Convert to YCbCr and take only Y channel
-        elif args.img_format == 'YCbCr':
-            image = Image.open(image_path).convert('RGB')
-            target = Image.open(image_path).convert('YCbCr')
-            target = np.array(image)[:, :, 0]
-        elif args.img_format == 'Y':
-            image = Image.open(image_path).convert('L')
-            target = np.array(image)
-        else:
-            raise ValueError("Image format must be 'RGB', 'YCbCr', or 'Y'")
-        
-        image_width = image.size[0]
-        image_height = image.size[1]       
-        
-        target = target / 255.0
-        target = target.astype(np.float32)
-        image = image.resize((int(image.size[0]//args.scale_factor), int(image.size[1]//args.scale_factor)), Image.BICUBIC)  # downscale image using bicubic interpolation
-        image = image.resize((int(image_width), int(image_height)), Image.BICUBIC)  # upscale image using bicubic interpolation
-        
-        img_to_tensor = transforms.ToTensor()
-        input = img_to_tensor(image).unsqueeze(0)  # add batch dimension
-
+    # Load image
+    if args.img_format == 'RGB':
+        image = Image.open(image_path).convert('RGB')
+        target = np.array(image.convert('YCbCr'))[:, :, 0]  # Convert to YCbCr and take only Y channel
+    elif args.img_format == 'YCbCr':
+        image = Image.open(image_path).convert('RGB')
+        target = Image.open(image_path).convert('YCbCr')
+        target = np.array(image)[:, :, 0]
+    elif args.img_format == 'Y':
+        image = Image.open(image_path).convert('L')
+        target = np.array(image)
     else:
-        # Load image
-        if args.img_format == 'RGB':
-            image = Image.open(image_path).convert('RGB')
-            target = image.copy()
-        elif args.img_format == 'YCbCr':
-            image = Image.open(image_path).convert('YCbCr')
-            target = image.copy()
-        elif args.img_format == 'Y':
-            image = Image.open(image_path).convert('L')
-            target = image.copy()
-        else:
-            raise ValueError("Image format must be 'RGB', 'YCbCr', or 'Y'")  
-        
-        image_width = image.size[0]
-        image_height = image.size[1]    
-        
-        non_padding_size_height = (image_height -(j+k+l) + 3)
-        non_padding_size_width = (image_width -(j+k+l) + 3)   
-        
-        target = target.resize((int(non_padding_size_width), int(non_padding_size_height)), Image.BICUBIC)  # downscale image using bicubic interpolation
-        
-        if args.img_format == 'RGB':
-            target = np.array(target.convert('YCbCr'))[:, :, 0]  # Convert to YCbCr and take only Y channel
-        elif args.img_format == 'YCbCr':
-            target = np.array(target)[:, :, 0]
-        elif args.img_format == 'Y':
-            target = np.array(target)
-        else:
-            raise ValueError("Image format must be 'RGB', 'YCbCr', or 'Y'")  
-
-        target = target/255.0
-        target = target.astype(np.float32)
-        image = image.resize((int(image.size[0]//args.scale_factor), int(image.size[1]//args.scale_factor)), Image.BICUBIC)  # downscale image using bicubic interpolation
-        image = image.resize((int(image_width), int(image_height)), Image.BICUBIC)  # upscale image using bicubic interpolation
-        img_to_tensor = transforms.ToTensor()
-        input = img_to_tensor(image).unsqueeze(0)  # add batch dimension
+        raise ValueError("Image format must be 'RGB', 'YCbCr', or 'Y'")
+    
+    image_width = image.size[0]
+    image_height = image.size[1]       
+    
+    target = target / 255.0
+    target = target.astype(np.float32)
+    image = image.resize((int(image.size[0]//args.scale_factor), int(image.size[1]//args.scale_factor)), Image.BICUBIC)  # downscale image using bicubic interpolation
+    image = image.resize((int(image_width), int(image_height)), Image.BICUBIC)  # upscale image using bicubic interpolation
+    
+    img_to_tensor = transforms.ToTensor()
+    input = img_to_tensor(image).unsqueeze(0)  # add batch dimension
 
 
     if args.weight.endswith('.pth'):

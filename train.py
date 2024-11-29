@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 
 from dataloader import DatasetFromFolder
 from dataloader import TestsetFromFolder
-from model import SRCNN
+from model import VDSR
 
 from skimage.metrics import peak_signal_noise_ratio
 import numpy as np
@@ -17,13 +17,11 @@ from skimage import io
 from util import *
 import os
 
-parser = argparse.ArgumentParser(description='SRCNN training parameters')
+parser = argparse.ArgumentParser(description='VDSR training parameters')
 parser.add_argument('--train_dataset', type=str, default="dataset/train", help='Training dataset path')
 parser.add_argument('--validation_dataset', type=str, default="dataset/validation", help='Validation dataset path')
-parser.add_argument('--save_root', type=str, default="checkpoint/SRCNN", help='Model save path')
-parser.add_argument('--architecture', type=str, default="955", help='Model architecture must be 3 layers')
+parser.add_argument('--save_root', type=str, default="checkpoint/VDSR", help='Model save path')
 parser.add_argument('--crop_size', type=int, default=64, help='Training image crop size')
-parser.add_argument('--padding',  action='store_true', default=False, help='same with output size')
 parser.add_argument('--scale_factor', type=int, default=2, help='Upscale factor')
 parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
 parser.add_argument('--num_workers', type=int, default=4, help='Number of workers')
@@ -44,8 +42,8 @@ torch.cuda.manual_seed(0)
 if not os.path.exists(args.save_root):
     os.makedirs(args.save_root)
 
-trainset = DatasetFromFolder(args.train_dataset, scale_factor=args.scale_factor, crop_size=args.crop_size, img_format = args.img_format, padding=args.padding, architecture=args.architecture)
-testset = TestsetFromFolder(args.validation_dataset, scale_factor=args.scale_factor, img_format=args.img_format, padding=args.padding, architecture=args.architecture)
+trainset = DatasetFromFolder(args.train_dataset, scale_factor=args.scale_factor, crop_size=args.crop_size, img_format = args.img_format)
+testset = TestsetFromFolder(args.validation_dataset, scale_factor=args.scale_factor, img_format=args.img_format)
 
 trainloader = DataLoader(
                             dataset=trainset, 
@@ -65,16 +63,13 @@ testloader = DataLoader(
                             drop_last=False
                         )
 
-model = SRCNN(architecture=args.architecture, padding= args.padding, img_format=args.img_format).to(device)
+model = VDSR(img_format=args.img_format).to(device)
 mse_criterion = nn.MSELoss()
 
-#SRCNN
-optimizer = optim.Adam(  #use Adam instead of SGD like in the paper, because it's faster
-    [
-        {"params": model.conv1.parameters(), "lr": 0.0001},  
-        {"params": model.conv2.parameters(), "lr": 0.0001},
-        {"params": model.conv3.parameters(), "lr": 0.00001},
-    ], lr=0.00001,
+#VDSR
+optimizer = optim.Adam(
+    model.parameters(),  
+    lr=0.0001,  
 )
 
 best_psnr = 0  # Initialize best PSNR
@@ -82,7 +77,7 @@ best_epoch = 0 # Initialize best epoch
 
 print("\n")
 print("*" * 100)
-print("START Training SRCNN!!")
+print("START Training VDSR!!")
 print("*" * 100)
 
 for epoch in range(args.nb_epochs):
@@ -157,7 +152,7 @@ for epoch in range(args.nb_epochs):
         print(f"New best model saved at epoch {epoch} with PSNR: {avg_psnr_value:.2f} dB.\n")
 
     # Save model
-    torch.save(model, args.save_root + f"/SRCNN_epoch{epoch}.pth")
+    torch.save(model, args.save_root + f"/VDSR_epoch{epoch}.pth")
 
 print("*" * 100)
 print("Training complete. \n")    
