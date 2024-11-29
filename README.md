@@ -2,6 +2,8 @@
 
 Implementation of VDSR in PyTorch.
 
+<img width="840" alt="캡처" src="https://github.com/user-attachments/assets/d6b2a1c1-c6f1-4a71-a76c-8c428c24a490">
+
 Provide 3 image format "RGB, YCb, Y"
 
 Calculate PSNR only Y channel
